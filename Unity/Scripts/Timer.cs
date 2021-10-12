@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿/*
+Copyright.
+*/
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
