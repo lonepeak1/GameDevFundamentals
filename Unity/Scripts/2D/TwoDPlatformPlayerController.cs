@@ -14,12 +14,44 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     Rigidbody2D rb;
     private Animator anim;
     LayerMask groundMaskLayer;
+    bool hasMovingAnimation = false;
+    bool hasJumpingAnimation = false;
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponentInChildren<Animator>();
         groundMaskLayer = LayerMask.GetMask(GroundMaskLayerName);
+
+        //check to see if there is an "IsMoving" animation.
+        try
+        {
+            foreach (AnimatorControllerParameter param in anim.parameters)
+            {
+                if(param.name == MovingAnimationParam)
+                    hasMovingAnimation = true;
+            }
+        }
+        catch(System.Exception e)
+        {
+            Debug.LogWarning("Please add a boolean "+ MovingAnimationParam + " trigger to your player animation.");
+        }
+
+        //check to see if there is an "IsJumping" animation.
+        try
+        {
+            foreach (AnimatorControllerParameter param in anim.parameters)
+            {
+                if (param.name == JumpingAnimationParam)
+                    hasJumpingAnimation = true;
+            }
+            
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("Please add a boolean " + JumpingAnimationParam + " trigger to your player animation.");
+        }
+
     }
 
     public GameObject feetPosition;
@@ -28,6 +60,8 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public float jumpSpeed = 5f;
     public string GroundMaskLayerName = "Ground";
     public string AttackAnimationTrigger = "Attack";
+    public string JumpingAnimationParam = "IsJumping";
+    public string MovingAnimationParam = "IsMoving";
     public string AttackAxis = "Fire1";
 
 
@@ -46,6 +80,18 @@ public class TwoDPlatformPlayerController : MonoBehaviour
 
         if (Input.GetAxis("Horizontal") > 0 && gameObject.transform.rotation.y == 0)
             gameObject.transform.Rotate(0, 180, 0);
+
+        //run the move animation or idle animation if necessary.
+        if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") == 0 && anim.GetBool(MovingAnimationParam))
+            anim.SetBool(MovingAnimationParam, false);
+        else if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") != 0 && !anim.GetBool(MovingAnimationParam))
+            anim.SetBool(MovingAnimationParam, true);
+
+        if(hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam))
+            anim.SetBool(JumpingAnimationParam, false);
+        else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam))
+            anim.SetBool(JumpingAnimationParam, true);
+
 
         //move forward if we are not touching the ground.
         if (rb.IsTouchingLayers(groundMaskLayer.value))
