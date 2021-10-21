@@ -64,14 +64,19 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public string MovingAnimationParam = "IsMoving";
     public string AttackAxis = "Fire1";
 
-
+    bool isAttacking = true;
     // Update is called once per frame
     void Update()
     {
         //Attack animation (Don't set the attack trigger if we are already in the attack state.
-        if (Input.GetAxisRaw(AttackAxis) > 0 && anim != null && !anim.GetCurrentAnimatorStateInfo(0).IsName(AttackAnimationTrigger))
+        if (!isAttacking && Input.GetAxisRaw(AttackAxis) > 0 && anim != null && !anim.GetCurrentAnimatorStateInfo(0).IsName(AttackAnimationTrigger))
         {
+            isAttacking = true;
             anim.SetTrigger(AttackAnimationTrigger);
+        }
+        else if(Input.GetAxisRaw(AttackAxis) == 0)
+        {
+            isAttacking = false;
         }
 
         //proper rotation of the game object
