@@ -11,6 +11,7 @@ public class DestroyOnCollision : MonoBehaviour
     public string[] tagsOfObjectsToNotDestroyWhenHit;
     public bool destroyMeOnAnyCollision = true;
     public bool destroyMeOnTargetCollision = true;
+    public string TagOfObjectToResetSceneWhenDestroy = "";
     // Start is called before the first frame update
     void Start()
     {
@@ -33,7 +34,10 @@ public class DestroyOnCollision : MonoBehaviour
         }
         if (destroy)
         {
+            if (TagOfObjectToResetSceneWhenDestroy != "" && collision.gameObject.tag.ToLower() == TagOfObjectToResetSceneWhenDestroy.ToLower())
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             Destroy(collision.gameObject);
+            
         }
 
         if (destroyMeOnAnyCollision || (destroy && destroyMeOnTargetCollision))
