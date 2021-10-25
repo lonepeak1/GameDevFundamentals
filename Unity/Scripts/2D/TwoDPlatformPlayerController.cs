@@ -16,9 +16,12 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     LayerMask groundMaskLayer;
     bool hasMovingAnimation = false;
     bool hasJumpingAnimation = false;
+    Collider2D[] playerColliders;
     // Start is called before the first frame update
     void Start()
     {
+        playerColliders = GetComponentsInChildren<Collider2D>();
+
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponentInChildren<Animator>();
         groundMaskLayer = LayerMask.GetMask(GroundMaskLayerName);
@@ -63,6 +66,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public string JumpingAnimationParam = "IsJumping";
     public string MovingAnimationParam = "IsMoving";
     public string AttackAxis = "Fire1";
+    public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
 
     bool isAttacking = true;
     // Update is called once per frame
@@ -80,7 +84,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
 
         //proper rotation of the game object
-            if (Input.GetAxis("Horizontal") < 0 && gameObject.transform.rotation.y != 0)
+        if (Input.GetAxis("Horizontal") < 0 && gameObject.transform.rotation.y != 0)
             gameObject.transform.rotation = Quaternion.identity;
 
         if (Input.GetAxis("Horizontal") > 0 && gameObject.transform.rotation.y == 0)
@@ -101,8 +105,14 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         //move forward if we are not touching the ground.
         if (rb.IsTouchingLayers(groundMaskLayer.value))
             rb.AddForce(Vector2.right * Input.GetAxis("Horizontal"), ForceMode2D.Impulse);
+        else
+        {
+            //allow the player to turn but only add a smaller force amount.
+            rb.AddForce(Vector2.right * Input.GetAxis("Horizontal") * airMoveFactor, ForceMode2D.Impulse);
 
-        if (rb.IsTouchingLayers(groundMaskLayer.value) && IsJumping() && rb.velocity.y < maxJumpSpeed)
+        }
+        //jump code (only allow jump if we are touching the ground and the collider is active.
+        if (isTouchingGround() && IsJumping() && rb.velocity.y < maxJumpSpeed)
             rb.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
 
         //max speed
@@ -128,10 +138,14 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             myFeetPosition = feetPosition;
         foreach (Collider2D coll in colliders)
         {
+            //check toi see if the collider is in the ground layer and if we are touching it.
             if (coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value)
             {
                 //Debug.Log(coll.gameObject.name + ":" + (coll.bounds.extents.y + coll.bounds.center.y).ToString());
-                if ((-coll.bounds.extents.y + coll.bounds.center.y) > myFeetPosition.transform.position.y && !coll.isTrigger && !rb.IsTouching(coll))
+                //are we above it, and are we over it
+                bool isOver = myFeetPosition.transform.position.x < (coll.bounds.extents.x + coll.bounds.center.x) && myFeetPosition.transform.position.x > (-coll.bounds.extents.x + coll.bounds.center.x);
+                bool isAbove = (-coll.bounds.extents.y + coll.bounds.center.y) > myFeetPosition.transform.position.y;
+                if ( isAbove && !coll.isTrigger && !rb.IsTouching(coll))
                 {
                     coll.isTrigger = true;
                 }
@@ -157,6 +171,31 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     private bool IsJumping()
     {
         return canJump && Input.GetAxisRaw("Jump") > 0;
+    }
+
+    /// <summary>
+    /// Checks if the player is touching the ground
+    /// </summary>
+    /// <returns></returns>
+    private bool isTouchingGround()
+    {
+        Collider2D[] colliders = GameObject.FindObjectsOfType<Collider2D>();
+        GameObject myFeetPosition = gameObject;
+        if (feetPosition != null)
+            myFeetPosition = feetPosition;
+        foreach (Collider2D coll in colliders)
+        {
+            //check toi see if the collider is in the ground layer and if we are touching it.
+            if (coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value)
+            {
+                foreach(Collider2D playerCollider in playerColliders)
+                    if(coll.IsTouching(playerCollider) && coll.isTrigger==false )
+                    {
+                        return true;
+                    }
+            }
+        }
+        return false;
     }
 
 }
