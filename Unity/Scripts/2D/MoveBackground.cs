@@ -12,8 +12,9 @@ using UnityEngine;
 /// </summary>
 public class MoveBackground : MonoBehaviour
 {
-    
-    public float moveSpeed=0.5f;
+
+    public float HorizontalMoveSpeed = 0.5f;
+    public float VerticalMoveSpeed = 0.5f;
     public GameObject target_gameobject;
     Renderer renderer;
     // Start is called before the first frame update
@@ -31,7 +32,7 @@ public class MoveBackground : MonoBehaviour
     {
         if (target_gameobject != null)
         {
-            Vector2 offset = new Vector2(target_gameobject.transform.position.x * moveSpeed, target_gameobject.transform.position.y * moveSpeed);
+            Vector2 offset = new Vector2(target_gameobject.transform.position.x * HorizontalMoveSpeed, target_gameobject.transform.position.y * VerticalMoveSpeed);
             renderer.material.SetTextureOffset("_MainTex", offset);
         }
         
