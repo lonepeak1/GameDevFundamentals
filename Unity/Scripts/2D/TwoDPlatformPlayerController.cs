@@ -14,8 +14,13 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     Rigidbody2D rb;
     private Animator anim;
     LayerMask groundMaskLayer;
+    LayerMask ladderMaskLayer;
+    LayerMask wallMaskLayer;
     bool hasMovingAnimation = false;
     bool hasJumpingAnimation = false;
+    bool hasClimbingAnimation = false;
+
+    bool isClimbing = false;
     Collider2D[] playerColliders;
     // Start is called before the first frame update
     void Start()
@@ -25,19 +30,21 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponentInChildren<Animator>();
         groundMaskLayer = LayerMask.GetMask(GroundMaskLayerName);
-
+        ladderMaskLayer = LayerMask.GetMask(LadderMaskLayerName);
+        wallMaskLayer = LayerMask.GetMask(wallMaskLayerName);
         //check to see if there is an "IsMoving" animation.
         try
         {
             foreach (AnimatorControllerParameter param in anim.parameters)
             {
-                if(param.name == MovingAnimationParam)
+                if (param.name == MovingAnimationParam)
                     hasMovingAnimation = true;
             }
         }
-        catch(System.Exception e)
+        finally { }
+        if(!hasMovingAnimation)
         {
-            Debug.LogWarning("Please add a boolean "+ MovingAnimationParam + " trigger to your player animation.");
+            Debug.LogWarning("Please add a boolean " + MovingAnimationParam + " parameter to your player animation.");
         }
 
         //check to see if there is an "IsJumping" animation.
@@ -48,37 +55,123 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 if (param.name == JumpingAnimationParam)
                     hasJumpingAnimation = true;
             }
-            
+
         }
-        catch (System.Exception e)
+        finally { }
+        if (!hasJumpingAnimation)
         {
-            Debug.LogWarning("Please add a boolean " + JumpingAnimationParam + " trigger to your player animation.");
+            Debug.LogWarning("Please add a boolean " + JumpingAnimationParam + " parameter to your player animation.");
         }
+
+        //check to see if there is an "IsClimbing" animation.
+        try
+        {
+            foreach (AnimatorControllerParameter param in anim.parameters)
+            {
+                if (param.name == ClimbingAnimationParam)
+                    hasClimbingAnimation = true;
+            }
+
+        }
+        finally { }
+
+        if (!hasClimbingAnimation)
+            Debug.LogWarning("If you would like your player to climb, please add a " + ClimbingAnimationParam + " boolean parameter to your player animation.");
+       
 
     }
 
     public GameObject feetPosition;
     public float maxRunSpeed = 2f;//Replace with your max speed
     public float maxJumpSpeed = 5f;
+    public float climbSpeed = 2f;
     public float jumpSpeed = 5f;
     public string GroundMaskLayerName = "Ground";
+    public string LadderMaskLayerName = "Ladder";
+    public string wallMaskLayerName = "Walls";
     public string AttackAnimationTrigger = "Attack";
     public string JumpingAnimationParam = "IsJumping";
     public string MovingAnimationParam = "IsMoving";
+    public string ClimbingAnimationParam = "IsClimbing";
     public string AttackAxis = "Fire1";
     public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
-
+    GameObject ladderPlatform = null;
     bool isAttacking = true;
+    bool isOnLadder = false;
     // Update is called once per frame
     void Update()
     {
+        //check to see if the user is touching a ladder collider
+        Collider2D[] colliders = GameObject.FindObjectsOfType<Collider2D>();
+
+
+        //if the user is pushing up or down and they are touching a ladder, then disable the gravity and move the user
+        if (Input.GetAxisRaw("Vertical") != 0 || isOnLadder)
+        {
+            //The player is allowed to jump if they are touching ground layers, they are giving a jump command, and their up velocity is less than the max jump speed.
+            //find the ladder we are touching and put a platform on it.
+            Collider2D climableLadder = isNearClimbableLadder(colliders);
+            if (ladderPlatform == null)
+            {
+                
+                if (climableLadder !=null)
+                {
+                    isOnLadder = true;
+                }
+                else
+                    isOnLadder = false;
+
+                if (isOnLadder)
+                {
+                    ladderPlatform = new GameObject("LadderCollider");
+                    ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, feetPosition.transform.position.y);
+                    BoxCollider2D playerLadderCollider = (BoxCollider2D)ladderPlatform.AddComponent(typeof(BoxCollider2D));
+                    //change this later to be the max width of the player's collider
+                    playerLadderCollider.size = new Vector2(climableLadder.bounds.extents.x * 2, 0.05f);
+                }
+            }
+            else
+            {
+                //are we still touching the ladder?
+                if (climableLadder != null)
+                {
+                    isOnLadder = true;
+                }
+                else
+                    isOnLadder = false;
+            }
+                        
+            if(ladderPlatform != null && isOnLadder)
+            {
+                isClimbing = true;
+            }
+        }
+        else
+            isClimbing = false;
+
+        //if they are not on the ladder and the ladder platform exists, remove it immediately.
+        if (!isOnLadder && ladderPlatform != null)
+        {
+            Destroy(ladderPlatform);
+            isOnLadder = false;
+            isClimbing = false;
+            ladderPlatform = null;
+        }
+
+        if (isClimbing && Input.GetAxisRaw("Vertical")!=0)
+        {
+            print("We are climbing.");
+            ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderPlatform.transform.position.y+climbSpeed* Input.GetAxisRaw("Vertical")*0.005f);
+
+
+        }
         //Attack animation (Don't set the attack trigger if we are already in the attack state.
         if (!isAttacking && Input.GetAxisRaw(AttackAxis) > 0 && anim != null && !anim.GetCurrentAnimatorStateInfo(0).IsName(AttackAnimationTrigger))
         {
             isAttacking = true;
             anim.SetTrigger(AttackAnimationTrigger);
         }
-        else if(Input.GetAxisRaw(AttackAxis) == 0)
+        else if (Input.GetAxisRaw(AttackAxis) == 0)
         {
             isAttacking = false;
         }
@@ -96,23 +189,29 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         else if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") != 0 && !anim.GetBool(MovingAnimationParam))
             anim.SetBool(MovingAnimationParam, true);
 
-        if(hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam))
+        //run the jumping animation if necessary
+        if (hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam))
             anim.SetBool(JumpingAnimationParam, false);
         else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam))
             anim.SetBool(JumpingAnimationParam, true);
 
+        //run the climbing animation if necessary
+        if (hasClimbingAnimation && Input.GetAxisRaw("Vertical") == 0 && anim.GetBool(ClimbingAnimationParam))
+            anim.SetBool(ClimbingAnimationParam, false);
+        else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") != 0 && !anim.GetBool(ClimbingAnimationParam))
+            anim.SetBool(ClimbingAnimationParam, true);
 
         //move forward if we are not touching the ground.
         if (rb.IsTouchingLayers(groundMaskLayer.value))
             rb.AddForce(Vector2.right * Input.GetAxis("Horizontal"), ForceMode2D.Impulse);
-        else
+        else if (!rb.IsTouchingLayers(wallMaskLayer.value))
         {
             //allow the player to turn but only add a smaller force amount.
             rb.AddForce(Vector2.right * Input.GetAxis("Horizontal") * airMoveFactor, ForceMode2D.Impulse);
-
         }
+
         //jump code (only allow jump if we are touching the ground and the collider is active.
-        if (isTouchingGround() && IsJumping() && rb.velocity.y < maxJumpSpeed)
+        if ((isTouchingGround(colliders) || isOnLadder) && IsJumping() && rb.velocity.y < maxJumpSpeed)
             rb.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
 
         //max speed
@@ -132,7 +231,6 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
 
         //turn off any ground colliders which are not below the FootLocation of the player.
-        Collider2D[] colliders = GameObject.FindObjectsOfType<Collider2D>();
         GameObject myFeetPosition = gameObject;
         if (feetPosition != null)
             myFeetPosition = feetPosition;
@@ -145,7 +243,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 //are we above it, and are we over it
                 bool isOver = myFeetPosition.transform.position.x < (coll.bounds.extents.x + coll.bounds.center.x) && myFeetPosition.transform.position.x > (-coll.bounds.extents.x + coll.bounds.center.x);
                 bool isAbove = (-coll.bounds.extents.y + coll.bounds.center.y) > myFeetPosition.transform.position.y;
-                if ( isAbove && !coll.isTrigger && !rb.IsTouching(coll))
+                if (isAbove && !coll.isTrigger && !rb.IsTouching(coll))
                 {
                     coll.isTrigger = true;
                 }
@@ -177,9 +275,8 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     /// Checks if the player is touching the ground
     /// </summary>
     /// <returns></returns>
-    private bool isTouchingGround()
+    private bool isTouchingGround(Collider2D[] colliders)
     {
-        Collider2D[] colliders = GameObject.FindObjectsOfType<Collider2D>();
         GameObject myFeetPosition = gameObject;
         if (feetPosition != null)
             myFeetPosition = feetPosition;
@@ -188,14 +285,34 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             //check toi see if the collider is in the ground layer and if we are touching it.
             if (coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value)
             {
-                foreach(Collider2D playerCollider in playerColliders)
-                    if(coll.IsTouching(playerCollider) && coll.isTrigger==false )
+                foreach (Collider2D playerCollider in playerColliders)
+                    if (coll.IsTouching(playerCollider) && coll.isTrigger == false)
                     {
                         return true;
                     }
             }
         }
         return false;
+    }
+
+    Collider2D isNearClimbableLadder(Collider2D[] colliders)
+    {
+        if (rb.IsTouchingLayers(ladderMaskLayer.value))
+        {
+            //we don't just want to be touching a ladder, we need to be within the bounds of its left and right collider
+            foreach (Collider2D coll in colliders)
+            {
+                if (coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == ladderMaskLayer.value && gameObject.transform.position.x > (-coll.bounds.extents.x + coll.bounds.center.x) && gameObject.transform.position.x < (coll.bounds.extents.x + coll.bounds.center.x))
+                {
+                    //we are climbing
+                    //the ladder feature has a box collider under the player so they can move left and right
+                    isOnLadder = true;
+                    return coll;
+                }
+            }
+        }
+        return null;
+
     }
 
 }
