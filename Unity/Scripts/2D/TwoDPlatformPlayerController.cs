@@ -32,6 +32,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public string JumpingAnimationParam = "IsJumping";
     public string MovingAnimationParam = "IsMoving";
     public string ClimbingAnimationParam = "IsClimbing";
+    public string ClimbingIdleAnimationParam = "IsClimbingIdle";
     public string AttackAxis = "Fire1";
     public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
     GameObject ladderPlatform = null;
@@ -218,8 +219,14 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder))
             anim.SetBool(JumpingAnimationParam, true);
 
+        //run the climbing idle animation if necessary
+        if ((hasClimbingAnimation && Input.GetAxisRaw("Vertical") != 0 && anim.GetBool(ClimbingIdleAnimationParam)) || !isOnLadder)
+            anim.SetBool(ClimbingIdleAnimationParam, false);
+        else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") == 0 && !anim.GetBool(ClimbingIdleAnimationParam))
+            anim.SetBool(ClimbingIdleAnimationParam, true);
+
         //run the climbing animation if necessary
-        if (hasClimbingAnimation && Input.GetAxisRaw("Vertical") == 0 && anim.GetBool(ClimbingAnimationParam))
+        if ((hasClimbingAnimation && Input.GetAxisRaw("Vertical") == 0 && anim.GetBool(ClimbingAnimationParam)) || !isOnLadder)
             anim.SetBool(ClimbingAnimationParam, false);
         else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") != 0 && !anim.GetBool(ClimbingAnimationParam))
             anim.SetBool(ClimbingAnimationParam, true);
@@ -236,7 +243,6 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         //jump code (only allow jump if we are touching the ground and the collider is active.
         if (allowAjump)
         {
-            print("jumping");
             rb.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
         }
 
