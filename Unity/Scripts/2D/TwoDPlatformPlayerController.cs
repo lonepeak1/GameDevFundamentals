@@ -20,6 +20,24 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     bool hasJumpingAnimation = false;
     bool hasClimbingAnimation = false;
 
+    public GameObject feetPosition;
+    public float maxRunSpeed = 4f;//Replace with your max speed
+    public float maxJumpSpeed = 10f;
+    public float climbSpeed = 1f;
+    public float jumpSpeed = 10f;
+    public string GroundMaskLayerName = "Ground";
+    public string LadderMaskLayerName = "Ladder";
+    public string wallMaskLayerName = "Walls";
+    public string AttackAnimationTrigger = "Attack";
+    public string JumpingAnimationParam = "IsJumping";
+    public string MovingAnimationParam = "IsMoving";
+    public string ClimbingAnimationParam = "IsClimbing";
+    public string AttackAxis = "Fire1";
+    public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
+    GameObject ladderPlatform = null;
+    bool isAttacking = true;
+    bool isOnLadder = false;
+
     bool isClimbing = false;
     Collider2D[] playerColliders;
     // Start is called before the first frame update
@@ -42,7 +60,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             }
         }
         finally { }
-        if(!hasMovingAnimation)
+        if (!hasMovingAnimation)
         {
             Debug.LogWarning("Please add a boolean " + MovingAnimationParam + " parameter to your player animation.");
         }
@@ -77,27 +95,11 @@ public class TwoDPlatformPlayerController : MonoBehaviour
 
         if (!hasClimbingAnimation)
             Debug.LogWarning("If you would like your player to climb, please add a " + ClimbingAnimationParam + " boolean parameter to your player animation.");
-       
+
 
     }
 
-    public GameObject feetPosition;
-    public float maxRunSpeed = 2f;//Replace with your max speed
-    public float maxJumpSpeed = 5f;
-    public float climbSpeed = 2f;
-    public float jumpSpeed = 5f;
-    public string GroundMaskLayerName = "Ground";
-    public string LadderMaskLayerName = "Ladder";
-    public string wallMaskLayerName = "Walls";
-    public string AttackAnimationTrigger = "Attack";
-    public string JumpingAnimationParam = "IsJumping";
-    public string MovingAnimationParam = "IsMoving";
-    public string ClimbingAnimationParam = "IsClimbing";
-    public string AttackAxis = "Fire1";
-    public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
-    GameObject ladderPlatform = null;
-    bool isAttacking = true;
-    bool isOnLadder = false;
+    
     // Update is called once per frame
     void Update()
     {
@@ -113,8 +115,8 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             Collider2D climableLadder = isNearClimbableLadder(colliders);
             if (ladderPlatform == null)
             {
-                
-                if (climableLadder !=null)
+
+                if (climableLadder != null)
                 {
                     isOnLadder = true;
                 }
@@ -126,8 +128,16 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                     ladderPlatform = new GameObject("LadderCollider");
                     ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, feetPosition.transform.position.y);
                     BoxCollider2D playerLadderCollider = (BoxCollider2D)ladderPlatform.AddComponent(typeof(BoxCollider2D));
+                    //apply a friction physics material so the player cannot fly off if they are on a swinging ladder.
+                    PhysicsMaterial2D friction = new PhysicsMaterial2D();
+                    friction.friction = 1;
+                    friction.bounciness = 0;
+                    playerLadderCollider.sharedMaterial = friction;
                     //change this later to be the max width of the player's collider
                     playerLadderCollider.size = new Vector2(climableLadder.bounds.extents.x * 2, 0.05f);
+                    ladderPlatform.transform.parent = climableLadder.transform;
+
+                    gameObject.transform.parent = climableLadder.transform;
                 }
             }
             else
@@ -136,18 +146,30 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 if (climableLadder != null)
                 {
                     isOnLadder = true;
+                    //turn the ladder platform so it is facing left/right at all times.
+                    Vector3 eulers = ladderPlatform.transform.eulerAngles;
+                    eulers.z = 0;
+                    ladderPlatform.transform.eulerAngles = eulers;
+                    transform.eulerAngles = eulers;
                 }
                 else
+                {
                     isOnLadder = false;
+                    gameObject.transform.parent = null;
+                }
             }
-                        
-            if(ladderPlatform != null && isOnLadder)
+
+            if (ladderPlatform != null && isOnLadder)
             {
                 isClimbing = true;
             }
         }
         else
+        {
             isClimbing = false;
+            if (gameObject.transform.parent != null)
+                gameObject.transform.parent = null;
+        }
 
         //if they are not on the ladder and the ladder platform exists, remove it immediately.
         if (!isOnLadder && ladderPlatform != null)
@@ -158,12 +180,9 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             ladderPlatform = null;
         }
 
-        if (isClimbing && Input.GetAxisRaw("Vertical")!=0)
+        if (isClimbing && Input.GetAxisRaw("Vertical") != 0)
         {
-            print("We are climbing.");
-            ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderPlatform.transform.position.y+climbSpeed* Input.GetAxisRaw("Vertical")*0.005f);
-
-
+            ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderPlatform.transform.position.y + climbSpeed * Input.GetAxisRaw("Vertical") * 0.005f);
         }
         //Attack animation (Don't set the attack trigger if we are already in the attack state.
         if (!isAttacking && Input.GetAxisRaw(AttackAxis) > 0 && anim != null && !anim.GetCurrentAnimatorStateInfo(0).IsName(AttackAnimationTrigger))
@@ -176,6 +195,10 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             isAttacking = false;
         }
 
+        bool grounded = isTouchingGround(colliders);
+        print(grounded);
+        bool allowAjump = (grounded || isOnLadder) && IsJumping() && rb.velocity.y < maxJumpSpeed;
+
         //proper rotation of the game object
         if (Input.GetAxis("Horizontal") < 0 && gameObject.transform.rotation.y != 0)
             gameObject.transform.rotation = Quaternion.identity;
@@ -184,15 +207,15 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             gameObject.transform.Rotate(0, 180, 0);
 
         //run the move animation or idle animation if necessary.
-        if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") == 0 && anim.GetBool(MovingAnimationParam))
+        if ((hasMovingAnimation && Input.GetAxisRaw("Horizontal") == 0 && anim.GetBool(MovingAnimationParam)))
             anim.SetBool(MovingAnimationParam, false);
         else if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") != 0 && !anim.GetBool(MovingAnimationParam))
             anim.SetBool(MovingAnimationParam, true);
 
         //run the jumping animation if necessary
-        if (hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam))
+        if (hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) || grounded || isOnLadder)
             anim.SetBool(JumpingAnimationParam, false);
-        else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam))
+        else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder))
             anim.SetBool(JumpingAnimationParam, true);
 
         //run the climbing animation if necessary
@@ -211,8 +234,11 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
 
         //jump code (only allow jump if we are touching the ground and the collider is active.
-        if ((isTouchingGround(colliders) || isOnLadder) && IsJumping() && rb.velocity.y < maxJumpSpeed)
+        if (allowAjump)
+        {
+            print("jumping");
             rb.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
+        }
 
         //max speed
         //if (rb.velocity.magnitude > maxRunSpeed)
