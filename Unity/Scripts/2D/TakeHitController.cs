@@ -76,9 +76,7 @@ public class TakeHitController : MonoBehaviour
                 }
             }
             else
-            {
                 TakeHit();
-            }
         }
     }
 

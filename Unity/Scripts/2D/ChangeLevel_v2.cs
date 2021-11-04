@@ -32,7 +32,7 @@ public class ChangeLevel_v2 : MonoBehaviour
         if (!this.isActiveAndEnabled)
             return;
 
-        if (collision.gameObject.name.ToLower() == tagOfObjectToTriggerSceneLoad.ToLower())
+        if (collision.gameObject.tag.ToLower() == tagOfObjectToTriggerSceneLoad.ToLower())
             UnityEngine.SceneManagement.SceneManager.LoadScene(sceneToLoad);
     }
 
