@@ -47,7 +47,17 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         playerColliders = GetComponentsInChildren<Collider2D>();
 
         rb = GetComponent<Rigidbody2D>();
+        if(rb ==  null)
+        {
+            Debug.LogError("Please add a rigidbody to your player to use this platformer script.");
+            return;
+        }
         anim = GetComponentInChildren<Animator>();
+        if (rb == null)
+        {
+            Debug.LogError("Please add an animation to your player to use this platformer script.");
+            return;
+        }
         groundMaskLayer = LayerMask.GetMask(GroundMaskLayerName);
         ladderMaskLayer = LayerMask.GetMask(LadderMaskLayerName);
         wallMaskLayer = LayerMask.GetMask(wallMaskLayerName);
@@ -197,7 +207,6 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
 
         bool grounded = isTouchingGround(colliders);
-        print(grounded);
         bool allowAjump = (grounded || isOnLadder) && IsJumping() && rb.velocity.y < maxJumpSpeed;
 
         //proper rotation of the game object
@@ -214,19 +223,19 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             anim.SetBool(MovingAnimationParam, true);
 
         //run the jumping animation if necessary
-        if (hasJumpingAnimation && Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) || grounded || isOnLadder)
+        if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) || grounded || isOnLadder))
             anim.SetBool(JumpingAnimationParam, false);
-        else if (hasJumpingAnimation && Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder))
+        else if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder)))
             anim.SetBool(JumpingAnimationParam, true);
 
         //run the climbing idle animation if necessary
-        if ((hasClimbingAnimation && Input.GetAxisRaw("Vertical") != 0 && anim.GetBool(ClimbingIdleAnimationParam)) || !isOnLadder)
+        if (hasClimbingAnimation && ((Input.GetAxisRaw("Vertical") != 0 && anim.GetBool(ClimbingIdleAnimationParam)) || !isOnLadder))
             anim.SetBool(ClimbingIdleAnimationParam, false);
         else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") == 0 && !anim.GetBool(ClimbingIdleAnimationParam))
             anim.SetBool(ClimbingIdleAnimationParam, true);
 
         //run the climbing animation if necessary
-        if ((hasClimbingAnimation && Input.GetAxisRaw("Vertical") == 0 && anim.GetBool(ClimbingAnimationParam)) || !isOnLadder)
+        if (hasClimbingAnimation && ((Input.GetAxisRaw("Vertical") == 0 && anim.GetBool(ClimbingAnimationParam)) || !isOnLadder))
             anim.SetBool(ClimbingAnimationParam, false);
         else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") != 0 && !anim.GetBool(ClimbingAnimationParam))
             anim.SetBool(ClimbingAnimationParam, true);
