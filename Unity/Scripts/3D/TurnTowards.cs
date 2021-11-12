@@ -56,7 +56,7 @@ public class TurnTowards : MonoBehaviour
             Vector3 dir = target.position - transform.position;
             Quaternion lookRotation = Quaternion.LookRotation(dir);
             Vector3 rotation = Quaternion.Lerp(partToRotate.rotation, lookRotation, Time.deltaTime * turnSpeed).eulerAngles;
-            partToRotate.rotation = Quaternion.Euler(transform.rotation.x, rotation.y, 0f);
+            partToRotate.rotation = Quaternion.Euler(transform.rotation.x, rotation.y, transform.rotation.z);
         }
 	}
 }

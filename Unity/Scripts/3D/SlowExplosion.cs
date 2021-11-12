@@ -19,11 +19,17 @@ public class SlowExplosion : MonoBehaviour
 
     void SmallRandomExplosions()
     {
+        GameObject projectile = Instantiate(ExplosionPrefab, gameObject.transform.position, gameObject.transform.rotation);
 
     }
 
-    void Explode()
+    void MeshExplode()
     {
         BroadcastMessage("Explode");
+    }
+
+    private void Destroy()
+    {
+        Destroy(gameObject);
     }
 }
