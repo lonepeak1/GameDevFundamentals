@@ -7,7 +7,7 @@ public class TiltTowards : MonoBehaviour
 	Transform target;
 	public Transform partToRotate;
 	public float turnSpeed = 10f;
-
+    public float MaxRotation = 45;
     public string[] TagsOfObjectsToTiltTowards;
     public float DistanceToStartTitlingTowardsObject = 999f;
 
@@ -27,16 +27,19 @@ public class TiltTowards : MonoBehaviour
             {
                 bool foundOne = false;
                 //are we within range of one of the specified objects to attack?
+                //point towards the closest one
+                float closest_distance = int.MaxValue;
                 foreach (string tag in TagsOfObjectsToTiltTowards)
                 {
                     GameObject[] objects = GameObject.FindGameObjectsWithTag(tag);
                     foreach (GameObject o in objects)
                     {
-                        if (Vector3.Distance(gameObject.transform.position, o.transform.position) <= DistanceToStartTitlingTowardsObject)
+                        float dist = Vector3.Distance(gameObject.transform.position, o.transform.position);
+                        if (dist <= DistanceToStartTitlingTowardsObject && dist<closest_distance)
                         {
+                            closest_distance = dist;
                             foundOne = true;
                             target = o.transform;
-                            continue;
                         }
                     }
                 }

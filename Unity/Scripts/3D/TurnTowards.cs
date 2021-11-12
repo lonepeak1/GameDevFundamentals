@@ -27,16 +27,18 @@ public class TurnTowards : MonoBehaviour
             {
                 bool foundOne = false;
                 //are we within range of one of the specified objects to attack?
+                float closest_distance = int.MaxValue;
                 foreach (string tag in TagsOfObjectsToRotateTowards)
                 {
                     GameObject[] objects = GameObject.FindGameObjectsWithTag(tag);
                     foreach (GameObject o in objects)
                     {
-                        if (Vector3.Distance(gameObject.transform.position, o.transform.position) <= DistanceToStartRotatingTowardsObject)
+                        float dist = Vector3.Distance(gameObject.transform.position, o.transform.position);
+                        if (dist <= DistanceToStartRotatingTowardsObject && dist < closest_distance)
                         {
+                            closest_distance = dist;
                             foundOne = true;
                             target = o.transform;
-                            continue;
                         }
                     }
                 }

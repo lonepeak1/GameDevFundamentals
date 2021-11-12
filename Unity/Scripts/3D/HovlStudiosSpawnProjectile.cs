@@ -1,57 +1,28 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
-public class SpawnProjectile3D
-    : MonoBehaviour
+public class HovlStudiosSpawnProjectile : SpawnProjectile3D
 {
-
-    public GameObject spawnPoint;
-    public GameObject projectTilePrefab;
-    public float projectTileSpeed = 30f;
-    protected DateTime lastSpawnTime = DateTime.Now;
-    //tags of gameobjects to shoot at
-    public string[] TagsOfObjectsToAttack;
-    public float DistanceToStartAttacking = 999f;
-    public double secondsBetweenProjectiles = 1;
-    public bool AutoFire = false;
-    public float secondsBeforeProjectileDies = 10;
-    public float secondsBeforeShotEffectsDestroy = 1;
-
-    public GameObject shotEffectsPrefab;
-
-    protected Rigidbody rb;
-    // Start is called before the first frame update
-    protected void Start()
-    {
-        rb = GetComponent<Rigidbody>();
-        if (rb == null)
-            rb = gameObject.GetComponentInParent<Rigidbody>();
-        if (spawnPoint == null)
-            spawnPoint = gameObject;
-    }
-
-    //if you come with in the specified range of an object, start attacking.
+   
 
     // Update is called once per frame
-    protected virtual void Update()
+    override protected void Update()
     {
-
-
         if ((AutoFire || Input.GetAxis("Fire1") > 0) && (DateTime.Now - lastSpawnTime).TotalSeconds > secondsBetweenProjectiles)
         {
             //are we within range of an object to shoot at?
-            if(TagsOfObjectsToAttack.Length>0)
+            if (TagsOfObjectsToAttack.Length > 0)
             {
                 bool foundOne = false;
                 //are we within range of one of the specified objects to attack?
-                foreach(string tag in TagsOfObjectsToAttack)
+                foreach (string tag in TagsOfObjectsToAttack)
                 {
                     GameObject[] objects = GameObject.FindGameObjectsWithTag(tag);
-                    foreach(GameObject o in objects)
+                    foreach (GameObject o in objects)
                     {
-                        if(Vector3.Distance(gameObject.transform.position,o.transform.position)<=DistanceToStartAttacking)
+                        if (Vector3.Distance(gameObject.transform.position, o.transform.position) <= DistanceToStartAttacking)
                         {
                             foundOne = true;
                             continue;
@@ -67,6 +38,12 @@ public class SpawnProjectile3D
             GameObject projectile = Instantiate(projectTilePrefab, spawnPoint.transform.position, spawnPoint.transform.rotation);
             //add force to the projectile so it moves
             Rigidbody projectileRigidBody = projectile.GetComponent<Rigidbody>();
+
+            ProjectileMover mover = projectile.GetComponent<ProjectileMover>();
+            if(mover != null)
+            {
+                mover.baseSpeed = rb.velocity.magnitude+projectTileSpeed;
+            }
 
             if (projectileRigidBody != null)
             {
@@ -86,6 +63,5 @@ public class SpawnProjectile3D
                 Destroy(image, secondsBeforeShotEffectsDestroy);
             }
         }
-
     }
 }
