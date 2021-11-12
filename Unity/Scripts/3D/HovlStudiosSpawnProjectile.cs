@@ -10,7 +10,7 @@ public class HovlStudiosSpawnProjectile : SpawnProjectile3D
     // Update is called once per frame
     override protected void Update()
     {
-        if ((AutoFire || Input.GetAxis("Fire1") > 0) && (DateTime.Now - lastSpawnTime).TotalSeconds > secondsBetweenProjectiles)
+        if ((AutoFire || Input.GetAxis(InputAxisToInitateSpawnedObject) > 0) && (DateTime.Now - lastSpawnTime).TotalSeconds > secondsBetweenProjectiles)
         {
             //are we within range of an object to shoot at?
             if (TagsOfObjectsToAttack.Length > 0)

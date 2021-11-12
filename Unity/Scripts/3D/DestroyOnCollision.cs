@@ -25,6 +25,10 @@ public class DestroyOnCollision : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+
+        if (!isActiveAndEnabled)
+            return;
+
         bool destroy = shouldDestroy(collision.gameObject.tag);
         if (prefabForDestoyEffects != null && destroy)
         {

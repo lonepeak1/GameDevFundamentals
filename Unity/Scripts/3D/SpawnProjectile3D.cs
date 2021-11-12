@@ -7,6 +7,7 @@ public class SpawnProjectile3D
     : MonoBehaviour
 {
 
+    public string InputAxisToInitateSpawnedObject = "Fire1";
     public GameObject spawnPoint;
     public GameObject projectTilePrefab;
     public float projectTileSpeed = 30f;
@@ -39,7 +40,7 @@ public class SpawnProjectile3D
     {
 
 
-        if ((AutoFire || Input.GetAxis("Fire1") > 0) && (DateTime.Now - lastSpawnTime).TotalSeconds > secondsBetweenProjectiles)
+        if ((AutoFire || Input.GetAxis(InputAxisToInitateSpawnedObject) > 0) && (DateTime.Now - lastSpawnTime).TotalSeconds > secondsBetweenProjectiles)
         {
             //are we within range of an object to shoot at?
             if(TagsOfObjectsToAttack.Length>0)

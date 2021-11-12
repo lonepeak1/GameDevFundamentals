@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class AnimateOnCollisionWithObject : MonoBehaviour
 {
-    public string TagOfObjectBeingHeld = "";
+    public string TagOfObjectBeingHit = "";
     public string AnimationTriggerToFireWhenHit = "";
     Animator anim;
     // Start is called before the first frame update
@@ -19,15 +19,21 @@ public class AnimateOnCollisionWithObject : MonoBehaviour
         
     }
 
-    private void OnTriggerEnter(Collider collision)
+
+    private void OnCollisionEnter(Collision collision)
     {
-        foreach(Transform child in collision.gameObject.transform)
+        if (!isActiveAndEnabled)
+            return;
+
+        if (TagOfObjectBeingHit == string.Empty || collision.gameObject.tag.ToLower() == TagOfObjectBeingHit.ToLower())
         {
-            if(child.gameObject.tag == TagOfObjectBeingHeld)
+            if (anim == null)
             {
-                anim.SetTrigger(AnimationTriggerToFireWhenHit);
-                Destroy(child.gameObject);
+                anim = collision.gameObject.GetComponent<Animator>();
+                if(anim!=null)
+                    anim.SetTrigger(AnimationTriggerToFireWhenHit);
             }
         }
+        
     }
 }
