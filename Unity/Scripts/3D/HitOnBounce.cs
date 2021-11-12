@@ -28,7 +28,7 @@ public class HitOnBounce : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
          if(hitController!=null && collision.gameObject.name.ToLower() == TagOfObjectToGiveHit.ToLower())
-            hitController.TakeHit();
+            hitController.TakeHit(collision.gameObject.transform);
     }
 
 }

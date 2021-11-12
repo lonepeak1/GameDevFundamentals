@@ -21,6 +21,7 @@ public class TakeHitController : MonoBehaviour
     public string AnimationTriggerToFireWhenHit = "";
     public string AnimationTriggerToFireWhenDead = "";
     public float TimeToDelayDestoryWhenDead = 0;
+    public GameObject prefabForHitEffects;
     public string TagOfGameObjectToCauseDamage = "Player";
     public string AnimationOfCollidingObjectToCauseDamage = ""; //The damage only occurs if the player is performing a specific animation at the time of collision.
     public Component[] ComponentsToDisableWhileTakingDamage = null;
@@ -53,7 +54,7 @@ public class TakeHitController : MonoBehaviour
             isRecoveringFromDamage = false;
         }
     }
-
+    
     private void OnTriggerEnter(Collider collision)
     {
         //if this script is disabled, return.
@@ -72,19 +73,24 @@ public class TakeHitController : MonoBehaviour
                     anim = collision.GetComponentInParent<Animator>();
                 if(anim != null && anim.GetCurrentAnimatorStateInfo(0).IsName(AnimationOfCollidingObjectToCauseDamage))
                 {
-                    TakeHit();
+                    TakeHit(collision.gameObject.transform);
                 }
             }
             else
-                TakeHit();
+                TakeHit(collision.gameObject.transform);
         }
     }
 
-    public void TakeHit()
+    public void TakeHit(Transform hitTransform)
     {
         //has it been enough time since the last hit?
         if (!isRecoveringFromDamage && (System.DateTime.Now - lastHitTime).TotalMilliseconds > timeBetweenHits)
         {
+            if(prefabForHitEffects != null)
+            {
+                GameObject effect = Instantiate(prefabForHitEffects, hitTransform.position, hitTransform.rotation,gameObject.transform);
+            }
+
             //increase the number of hits on this object
             numHits++;
             isRecoveringFromDamage = true;
