@@ -11,6 +11,7 @@ using UnityEngine;
 
 public class TwoDPlatformPlayerController : MonoBehaviour
 {
+    public GameObject intersectionHelper;
     Rigidbody2D rb;
     private Animator anim;
     LayerMask groundMaskLayer;
@@ -21,10 +22,13 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     bool hasClimbingAnimation = false;
 
     public GameObject feetPosition;
-    public float maxRunSpeed = 4f;//Replace with your max speed
-    public float maxJumpSpeed = 10f;
-    public float climbSpeed = 1f;
-    public float jumpSpeed = 10f;
+    public float fastClimbFactor = 2f;
+    public float fastJumpFactor = 1.5f;
+    public float walkSpeed = 3f;//Replace with your max speed
+    public float runSpeed = 6f;//Replace with your max speed
+    public float climbSpeed = 3f;
+    public float jumpSpeed = 5f;
+
     public string GroundMaskLayerName = "Ground";
     public string LadderMaskLayerName = "Ladder";
     public string wallMaskLayerName = "Walls";
@@ -33,13 +37,17 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public string MovingAnimationParam = "IsMoving";
     public string ClimbingAnimationParam = "IsClimbing";
     public string ClimbingIdleAnimationParam = "IsClimbingIdle";
+    public string FastModeKey = "f";
     public string AttackAxis = "Fire1";
     public float airMoveFactor = 0.2f;//this controls how much the player moves while in the air.
     GameObject ladderPlatform = null;
+    Collider2D closestClimableLader = null;
     bool isAttacking = true;
     bool isOnLadder = false;
-
+    enum speed { fast, slow }
+    speed movespeed = TwoDPlatformPlayerController.speed.slow;
     bool isClimbing = false;
+    float distanceFromLadder = 0f;//used to help keep the player moving straight up and down the ladder when it is moving.
     Collider2D[] playerColliders;
     // Start is called before the first frame update
     void Start()
@@ -47,7 +55,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         playerColliders = GetComponentsInChildren<Collider2D>();
 
         rb = GetComponent<Rigidbody2D>();
-        if(rb ==  null)
+        if (rb == null)
         {
             Debug.LogError("Please add a rigidbody to your player to use this platformer script.");
             return;
@@ -110,10 +118,19 @@ public class TwoDPlatformPlayerController : MonoBehaviour
 
     }
 
-    
+
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
+
+        float currentJumpSpeed = this.jumpSpeed;
+        float currentClimbSpeed = climbSpeed;
+        if (this.movespeed == speed.fast)
+        {
+            currentJumpSpeed *= fastJumpFactor;
+            currentClimbSpeed *= fastClimbFactor;
+        }
+
         //check to see if the user is touching a ladder collider
         Collider2D[] colliders = GameObject.FindObjectsOfType<Collider2D>();
 
@@ -124,9 +141,10 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             //The player is allowed to jump if they are touching ground layers, they are giving a jump command, and their up velocity is less than the max jump speed.
             //find the ladder we are touching and put a platform on it.
             Collider2D climableLadder = isNearClimbableLadder(colliders);
+            closestClimableLader = climableLadder;
             if (ladderPlatform == null)
             {
-
+                
                 if (climableLadder != null)
                 {
                     isOnLadder = true;
@@ -136,8 +154,20 @@ public class TwoDPlatformPlayerController : MonoBehaviour
 
                 if (isOnLadder)
                 {
+                    if(Input.GetAxisRaw("Vertical") != 0)
+                    {
+                        //stop the horizontal velocity
+                        rb.velocity = new Vector2(0, 0);
+                    }
+                    float verticalVelocity = rb.velocity.y;
+                    
+
+                    //add the platform to stand on
                     ladderPlatform = new GameObject("LadderCollider");
-                    ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, feetPosition.transform.position.y);
+                    float ladderYPos = feetPosition.transform.position.y;
+                    if (verticalVelocity <= -20)
+                        ladderYPos -= 30;
+                    ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderYPos);
                     BoxCollider2D playerLadderCollider = (BoxCollider2D)ladderPlatform.AddComponent(typeof(BoxCollider2D));
                     //apply a friction physics material so the player cannot fly off if they are on a swinging ladder.
                     PhysicsMaterial2D friction = new PhysicsMaterial2D();
@@ -147,7 +177,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                     //change this later to be the max width of the player's collider
                     playerLadderCollider.size = new Vector2(climableLadder.bounds.extents.x * 2, 0.05f);
                     ladderPlatform.transform.parent = climableLadder.transform;
-
+                    //this is important to maintain the same velocity as the ladder.
                     gameObject.transform.parent = climableLadder.transform;
                 }
             }
@@ -156,6 +186,12 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 //are we still touching the ladder?
                 if (climableLadder != null)
                 {
+                    if (Input.GetAxisRaw("Vertical") != 0)
+                    {
+                        //stop the horizontal velocity
+                        rb.velocity = new Vector2(0, 0);
+                    }
+
                     isOnLadder = true;
                     //turn the ladder platform so it is facing left/right at all times.
                     Vector3 eulers = ladderPlatform.transform.eulerAngles;
@@ -167,6 +203,13 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 {
                     isOnLadder = false;
                     gameObject.transform.parent = null;
+                    if (ladderPlatform != null)
+                    {
+                        Destroy(ladderPlatform);
+                        ladderPlatform = null;
+                    }
+                        
+                    
                 }
             }
 
@@ -191,10 +234,46 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             ladderPlatform = null;
         }
 
-        if (isClimbing && Input.GetAxisRaw("Vertical") != 0)
+        if (isOnLadder && Input.GetAxisRaw("Vertical") != 0)
         {
-            ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderPlatform.transform.position.y + climbSpeed * Input.GetAxisRaw("Vertical") * 0.005f);
+            float newX = feetPosition.transform.position.x;
+            float newPlatformY = ladderPlatform.transform.position.y + Input.GetAxisRaw("Vertical") * 0.005f * currentClimbSpeed;
+
+            //put the platform centered on the swinging ladder at the current y position of the platform.
+            //cast a ray towards the ladder.  If we are not at least the minimum distance then move closer to it.
+            RaycastHit2D? hit = FindRayCastHistToClosestClimbableLadder();
+            //if we found the collider of the ladder near by 
+            if (hit.HasValue)
+            {
+                {
+                    Collider2D collider = hit.Value.collider;
+                    float top = collider.offset.y + (collider.bounds.size.y / 2f);
+                    float btm = collider.offset.y - (collider.bounds.size.y / 2f);
+                    float left = collider.offset.x - (collider.bounds.size.x / 2f);
+                    float right = collider.offset.x + (collider.bounds.size.x / 2f);
+
+                    Vector3 topLeft = collider.gameObject.transform.TransformPoint(new Vector3(left, top, 0f));
+                    Vector3 topRight = collider.gameObject.transform.TransformPoint(new Vector3(right, top, 0f));
+                    Vector3 btmLeft = collider.gameObject.transform.TransformPoint(new Vector3(left, btm, 0f));
+                    Vector3 btmRight = collider.gameObject.transform.TransformPoint(new Vector3(right, btm, 0f));
+                    Debug.DrawLine(topLeft, topRight);
+                    Debug.DrawLine(topLeft, btmLeft);
+                    Debug.DrawLine(btmLeft, btmRight);
+                    Debug.DrawLine(btmRight, topRight);
+                    newX = hit.Value.point.x;
+                    //The player must maintain the distance from theladder platform
+                    float currentDistance = Vector2.Distance(gameObject.transform.position, ladderPlatform.transform.position);
+                    intersectionHelper.transform.position = new Vector2(newX, ladderPlatform.transform.position.y + 0.2f);
+                    //this is what makes the swinging ladders work. (Keeping us centered as we climb up and down)
+                    gameObject.transform.position = new Vector2(newX, newPlatformY + currentDistance);
+                }
+            }
+            ladderPlatform.transform.position = new Vector2(newX, newPlatformY);
+
+
         }
+
+
         //Attack animation (Don't set the attack trigger if we are already in the attack state.
         if (!isAttacking && Input.GetAxisRaw(AttackAxis) > 0 && anim != null && !anim.GetCurrentAnimatorStateInfo(0).IsName(AttackAnimationTrigger))
         {
@@ -206,8 +285,11 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             isAttacking = false;
         }
 
+
+
+
         bool grounded = isTouchingGround(colliders);
-        bool allowAjump = (grounded || isOnLadder) && IsJumping() && rb.velocity.y < maxJumpSpeed;
+        bool allowAjump = (grounded || isOnLadder) && IsJumping();//&& rb.velocity.y < currentClimbSpeed;
 
         //proper rotation of the game object
         if (Input.GetAxis("Horizontal") < 0 && gameObject.transform.rotation.y != 0)
@@ -240,35 +322,79 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         else if (hasClimbingAnimation && isOnLadder && Input.GetAxisRaw("Vertical") != 0 && !anim.GetBool(ClimbingAnimationParam))
             anim.SetBool(ClimbingAnimationParam, true);
 
+        try
+        {
+            if (Input.GetKeyDown(FastModeKey))
+            {
+                if (this.movespeed == speed.fast)
+                    this.movespeed = speed.slow;
+                else
+                    this.movespeed = speed.fast;
+            }
+        }
+        catch (System.Exception exc)
+        {
+            Debug.LogError(exc.Message);
+        }
+
+        float goSpeed = walkSpeed;
+
+        if (this.movespeed == speed.fast)
+            goSpeed = runSpeed;
+
+
+
+
         //move forward if we are not touching the ground.
         if (rb.IsTouchingLayers(groundMaskLayer.value))
-            rb.AddForce(Vector2.right * Input.GetAxis("Horizontal"), ForceMode2D.Impulse);
+            rb.AddForce(Vector2.right * Input.GetAxis("Horizontal") * goSpeed, ForceMode2D.Impulse);
         else if (!rb.IsTouchingLayers(wallMaskLayer.value))
         {
             //allow the player to turn but only add a smaller force amount.
-            rb.AddForce(Vector2.right * Input.GetAxis("Horizontal") * airMoveFactor, ForceMode2D.Impulse);
+            rb.AddForce(Vector2.right * Input.GetAxis("Horizontal") * airMoveFactor * goSpeed, ForceMode2D.Impulse);
         }
 
         //jump code (only allow jump if we are touching the ground and the collider is active.
         if (allowAjump)
         {
-            rb.AddForce(Vector2.up * jumpSpeed, ForceMode2D.Impulse);
+           
+            rb.AddForce(Vector2.up * currentJumpSpeed, ForceMode2D.Impulse);
+            //remove the ladder platform now that they have jumped.
+            if (ladderPlatform != null)
+            {
+                Destroy(ladderPlatform);
+                ladderPlatform = null;
+                isOnLadder = false;
+            }
+
         }
 
         //max speed
         //if (rb.velocity.magnitude > maxRunSpeed)
         //    rb.velocity = rb.velocity.normalized * maxRunSpeed;
 
-        if (Mathf.Abs(rb.velocity.x) > maxRunSpeed)
+        if (!isClimbing)
         {
-            // and finally asign the new vel
-            rb.velocity = new Vector2(maxRunSpeed * Mathf.Sign(rb.velocity.x), rb.velocity.y);
+            if (this.movespeed == speed.slow && Mathf.Abs(rb.velocity.x) > goSpeed)
+            {
+                // and finally asign the new vel
+                rb.velocity = new Vector2(goSpeed * Mathf.Sign(rb.velocity.x), rb.velocity.y);
+            }
+            else if (this.movespeed == speed.fast && Mathf.Abs(rb.velocity.x) > runSpeed)
+            {
+                // and finally asign the new vel
+                rb.velocity = new Vector2(runSpeed * Mathf.Sign(rb.velocity.x), rb.velocity.y);
+            }
         }
-
-        if (Mathf.Abs(rb.velocity.y) > maxJumpSpeed)
+        if (isClimbing && Mathf.Abs(rb.velocity.y) > currentClimbSpeed)
         {
             // and finally asign the new vel
-            rb.velocity = new Vector2(rb.velocity.x, maxJumpSpeed * Mathf.Sign(rb.velocity.y));
+            rb.velocity = new Vector2(rb.velocity.x, currentClimbSpeed * Mathf.Sign(rb.velocity.y));
+        }
+        else if (IsJumping() && Mathf.Abs(rb.velocity.y) > currentJumpSpeed)
+        {
+            // and finally asign the new vel
+            rb.velocity = new Vector2(rb.velocity.x, currentJumpSpeed * Mathf.Sign(rb.velocity.y));
         }
 
         //turn off any ground colliders which are not below the FootLocation of the player.
@@ -300,6 +426,43 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             canJump = false;
         else if (!canJump && Input.GetAxisRaw("Jump") == 0)
             canJump = true;
+    }
+
+    private RaycastHit2D? FindRayCastHistToClosestClimbableLadder()
+    {
+        Collider2D coll_var = closestClimableLader.GetComponent<Collider2D>();
+        Vector2 direction = Vector2.left;
+        RaycastHit2D? hit = findLadderRayCastHit(direction, coll_var);
+        if (!hit.HasValue)
+        {
+            direction = Vector2.right;
+            hit = findLadderRayCastHit(direction, coll_var);
+        }
+        if (!hit.HasValue)
+        {
+            direction = Vector2.up;
+            hit = findLadderRayCastHit(direction, coll_var);
+        }
+        if (!hit.HasValue)
+        {
+            direction = Vector2.down;
+            hit = findLadderRayCastHit(direction, coll_var);
+        }
+
+        return hit;
+    }
+
+    RaycastHit2D? findLadderRayCastHit(Vector2 direction, Collider2D match)
+    {
+        RaycastHit2D[] hits = Physics2D.RaycastAll(feetPosition.transform.position, direction);
+        foreach (RaycastHit2D hit in hits)
+        {
+            if (hit.collider.GetInstanceID() == match.GetInstanceID())
+            {
+                return hit;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -354,6 +517,31 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
         return null;
 
+    }
+
+    public static bool LineLineIntersection(out Vector3 intersection, Vector3 linePoint1,
+        Vector3 lineVec1, Vector3 linePoint2, Vector3 lineVec2)
+    {
+
+        Vector3 lineVec3 = linePoint2 - linePoint1;
+        Vector3 crossVec1and2 = Vector3.Cross(lineVec1, lineVec2);
+        Vector3 crossVec3and2 = Vector3.Cross(lineVec3, lineVec2);
+
+        float planarFactor = Vector3.Dot(lineVec3, crossVec1and2);
+
+        //is coplanar, and not parallel
+        if (Mathf.Abs(planarFactor) < 0.0001f
+                && crossVec1and2.sqrMagnitude > 0.0001f)
+        {
+            float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
+            intersection = linePoint1 + (lineVec1 * s);
+            return true;
+        }
+        else
+        {
+            intersection = Vector3.zero;
+            return false;
+        }
     }
 
 }
