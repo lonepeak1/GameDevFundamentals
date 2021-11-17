@@ -26,6 +26,8 @@ public class ActivateComponentWhenHit : MonoBehaviour
     }
 
     public string TagOfObjectToCauseActivation = "Player";
+
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (enabled)
@@ -35,6 +37,10 @@ public class ActivateComponentWhenHit : MonoBehaviour
                 if (ComponentToActivateOnCollision is Collider2D)
                 {
                     ((Collider2D)ComponentToActivateOnCollision).enabled = true;
+                }
+                else if (ComponentToActivateOnCollision is Animator)
+                {
+                    ((Animator)ComponentToActivateOnCollision).enabled = true;
                 }
             }
         }

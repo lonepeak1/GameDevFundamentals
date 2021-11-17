@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class AnimateOnCollisionWithObject : MonoBehaviour
 {
-    public string TagOfObjectBeingHeld = "";
+    public string TagOfObjectBeingHit = "";
     public string AnimationTriggerToFireWhenHit = "";
     Animator anim;
+    Animator objectHitAnimator;
     // Start is called before the first frame update
     void Start()
     {
@@ -21,13 +22,46 @@ public class AnimateOnCollisionWithObject : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        foreach(Transform child in collision.gameObject.transform)
+        if (!isActiveAndEnabled)
+            return;
+
+        if (TagOfObjectBeingHit == string.Empty || collision.gameObject.tag.ToLower() == TagOfObjectBeingHit.ToLower())
         {
-            if(child.gameObject.tag == TagOfObjectBeingHeld)
+            if (objectHitAnimator == null)
             {
-                anim.SetTrigger(AnimationTriggerToFireWhenHit);
-                Destroy(child.gameObject);
+                objectHitAnimator = collision.gameObject.GetComponent<Animator>();
+                if (objectHitAnimator != null)
+                    objectHitAnimator.SetTrigger(AnimationTriggerToFireWhenHit);
+            }
+            if (anim == null)
+            {
+                anim = collision.gameObject.GetComponent<Animator>();
+                if (anim != null)
+                    anim.SetTrigger(AnimationTriggerToFireWhenHit);
             }
         }
+
+    }
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (!isActiveAndEnabled)
+            return;
+
+         if (TagOfObjectBeingHit == string.Empty || collision.gameObject.tag.ToLower() == TagOfObjectBeingHit.ToLower())
+        {
+            if (objectHitAnimator == null)
+            {
+                objectHitAnimator = collision.gameObject.GetComponent<Animator>();
+                if (objectHitAnimator != null)
+                    objectHitAnimator.SetTrigger(AnimationTriggerToFireWhenHit);
+            }
+            if (anim == null)
+            {
+                anim = collision.gameObject.GetComponent<Animator>();
+                if(anim!=null)
+                    anim.SetTrigger(AnimationTriggerToFireWhenHit);
+            }
+        }
+        
     }
 }
