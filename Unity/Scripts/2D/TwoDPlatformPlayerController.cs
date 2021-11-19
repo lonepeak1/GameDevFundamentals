@@ -46,6 +46,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     bool hasJumpingAnimation = false;
     bool hasClimbingAnimation = false;
     bool hasGroundedAnimation = false;
+    bool hasFallingAnimation = false;
 
     public GameObject feetPosition;
     public float fastClimbFactor = 2f;
@@ -61,6 +62,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public string AttackAnimationTrigger = "Attack";
     public string JumpingAnimationParam = "IsJumping";
     public string MovingAnimationParam = "IsMoving";
+    public string IsFallingAnimationParam = "IsFalling";
     public string ClimbingAnimationParam = "IsClimbing";
     public string ClimbingIdleAnimationParam = "IsClimbingIdle";
     public string IsGroundedAnimationParam = "IsGrounded";
@@ -77,12 +79,23 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     bool isClimbing = false;
     float distanceFromLadder = 0f;//used to help keep the player moving straight up and down the ladder when it is moving.
     Collider2D[] playerColliders;
+
+    bool hasTagOfFixedGround = false;
     // Start is called before the first frame update
 
     //check to see if the user is touching a ladder collider
     Collider2D[] colliders;
     void Start()
     {
+        //determine if we have fixed ground capability.
+        try{
+            hasTagOfFixedGround = gameObject.CompareTag(TagOfFixedGround);
+        }
+        catch(System.Exception exc)
+        {
+
+        }
+
         colliders = GameObject.FindObjectsOfType<Collider2D>();
         playerColliders = GetComponentsInChildren<Collider2D>();
 
@@ -162,6 +175,22 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             finally { }
             if (!hasGroundedAnimation)
                 Debug.LogWarning("If you would like your player to animate when landing on the ground, please add a " + IsGroundedAnimationParam + " boolean parameter to your player animation.");
+
+
+            //check to see if there is an "IsFalling" animation.
+            try
+            {
+                foreach (AnimatorControllerParameter param in anim.parameters)
+                {
+                    if (param.name == IsFallingAnimationParam)
+                        hasFallingAnimation = true;
+                }
+
+            }
+            finally { }
+            if (!hasFallingAnimation)
+                Debug.LogWarning("If you would like your player to animate when falling, please add an " + IsFallingAnimationParam + " boolean parameter to your player animation.");
+
 
         }
 
@@ -466,7 +495,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         foreach (Collider2D coll in colliders)
         {
             //check to see if the collider is in the ground layer and if we are touching it.
-            if (coll != null && coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value && !coll.gameObject.CompareTag(TagOfFixedGround))
+            if (coll != null && coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value && (!hasTagOfFixedGround || !coll.gameObject.CompareTag(TagOfFixedGround)))
             {
                 //Debug.Log(coll.gameObject.name + ":" + (coll.bounds.extents.y + coll.bounds.center.y).ToString());
                 //are we above it, and are we over it
@@ -490,13 +519,26 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             canJump = true;
 
         //set the is grounded trigger if necessary
-        if(grounded && hasGroundedAnimation)
+        if(grounded && hasGroundedAnimation && !anim.GetBool(IsGroundedAnimationParam))
         {
             anim.SetBool(IsGroundedAnimationParam, true);
         }
-        else if(!grounded && hasGroundedAnimation)
+        else if(!grounded && hasGroundedAnimation && anim.GetBool(IsGroundedAnimationParam))
         {
             anim.SetBool(IsGroundedAnimationParam, false);
+        }
+
+        //we know we are falling if we are not grounded and the up velocity is <0
+        bool isFalling = !grounded && rb.velocity.y < 0;
+
+        //set the is falling trigger if necessary
+        if (isFalling && hasFallingAnimation && !anim.GetBool(IsFallingAnimationParam))
+        {
+            anim.SetBool(IsFallingAnimationParam, true);
+        }
+        else if (!isFalling && hasFallingAnimation && anim.GetBool(IsFallingAnimationParam))
+        {
+            anim.SetBool(IsFallingAnimationParam, false);
         }
     }
 
