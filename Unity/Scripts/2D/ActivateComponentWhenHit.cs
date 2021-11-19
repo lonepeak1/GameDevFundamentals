@@ -111,8 +111,9 @@ public class ActivateComponentWhenHit : MonoBehaviour
                     }
 
                 }
+                lastToggleTime = DateTime.Now;
             }
-            lastToggleTime = DateTime.Now;
+            
         }
     }
 }
