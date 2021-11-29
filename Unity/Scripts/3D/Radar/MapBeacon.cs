@@ -16,6 +16,9 @@ public class MapBeacon : MonoBehaviour
         Radar[] radars = GameObject.FindObjectsOfType<Radar>();
         if(radars.Length>0)
             RadarCenterObject = radars[0].gameObject;
+        if (gameObject.tag == "Player")
+            MapText = gameObject.name;
+
 	}
 
     // Update is called once per frame

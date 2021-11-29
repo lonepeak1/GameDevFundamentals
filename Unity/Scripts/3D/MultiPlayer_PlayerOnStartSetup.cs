@@ -11,6 +11,9 @@ public class MultiPlayer_PlayerOnStartSetup : MonoBehaviour
         //attach the virtual camera to the network connected player
         GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
         GameObject playerInThisConnection = null;
+        MultiPlayerMenu menu = GameObject.FindObjectOfType<MultiPlayerMenu>();
+        if(menu!=null)
+            this.name=menu.PlayerName;
         foreach(GameObject go in players)
         {
             NetworkObject no = go.GetComponent<NetworkObject>();
@@ -63,6 +66,8 @@ public class MultiPlayer_PlayerOnStartSetup : MonoBehaviour
             {
                 minimap.playerObject = playerInThisConnection;
                 minimap.Radar = radarInThisConnection;
+                if(menu!=null)
+                    minimap.PlayerName = menu.PlayerName;
             }
 
         }

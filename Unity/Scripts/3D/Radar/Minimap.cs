@@ -7,6 +7,7 @@ public class Minimap : MonoBehaviour
 {
     public bool ScanTerrain = false;
 	// find the ship object we want to show on the map
+	public string PlayerName = "Player";
 	public GameObject playerObject;
 	public Texture aTexture;
 	Vector2 mapSideNorthStartPoint;
@@ -37,39 +38,47 @@ public class Minimap : MonoBehaviour
 	   
 	// Use this for initialization
 	void Start()
+    {
+        Radar = GameObject.FindObjectOfType<Radar>();
+        if (playerObject == null)
+            playerObject = GameObject.FindGameObjectWithTag("Player");
+        InitMapSettings();
+    }
+
+    private void InitMapSettings()
+    {
+        mapWidth = Screen.width * 0.5f;   // 20% of width
+        mapHeight = Screen.height * 0.5f;
+
+
+        mapSize = new Vector2(mapWidth, mapHeight);
+        //Vector3 mapStart = new Vector2(Screen.width - mapSize.x - 10, Screen.height - mapSize.y - 10);
+        mapStart = new Vector2(10, Screen.height - mapSize.y - 10);
+
+
+        // calculate center of mini-map in screen coordinates
+        mapCenter = new Vector2(mapStart.x + mapSize.x / 2, mapStart.y + mapSize.y / 2);
+
+        mapSideNorthStartPoint = new Vector2(mapStart.x, mapStart.y);
+        mapSideNorthStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y);
+        mapSideSouthStartPoint = new Vector2(mapStart.x, mapStart.y + mapHeight);
+        mapSideSouthStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y + mapHeight);
+        mapSideWestStartPoint = new Vector2(mapStart.x, mapStart.y);
+        mapSideWestStopPoint = new Vector2(mapStart.x, mapStart.y + mapHeight);
+        mapSideEastStartPoint = new Vector2(mapStart.x + mapWidth, mapStart.y);
+        mapSideEastStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y + mapHeight);
+
+        backgroundImageHeight = mapHeight;
+        backgroundImageWidth = mapHeight;
+    }
+
+    // Update is called once per frame
+    void Update()
 	{
-		Radar = GameObject.FindObjectOfType<Radar>();
-        if(playerObject == null)
-		    playerObject = GameObject.FindGameObjectWithTag("Player");
-		mapWidth = Screen.width * 0.5f;   // 20% of width
-		mapHeight = Screen.height * 0.5f;
-
-
-		mapSize = new Vector2(mapWidth, mapHeight);
-		//Vector3 mapStart = new Vector2(Screen.width - mapSize.x - 10, Screen.height - mapSize.y - 10);
-		mapStart = new Vector2(10, Screen.height - mapSize.y - 10);
-
-
-		// calculate center of mini-map in screen coordinates
-		mapCenter = new Vector2(mapStart.x + mapSize.x / 2, mapStart.y + mapSize.y / 2);
-
-		mapSideNorthStartPoint = new Vector2(mapStart.x, mapStart.y);
-		mapSideNorthStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y);
-		mapSideSouthStartPoint = new Vector2(mapStart.x, mapStart.y + mapHeight);
-		mapSideSouthStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y + mapHeight);
-		mapSideWestStartPoint = new Vector2(mapStart.x, mapStart.y);
-		mapSideWestStopPoint = new Vector2(mapStart.x, mapStart.y + mapHeight);
-		mapSideEastStartPoint = new Vector2(mapStart.x + mapWidth, mapStart.y);
-		mapSideEastStopPoint = new Vector2(mapStart.x + mapWidth, mapStart.y + mapHeight);
-
-		backgroundImageHeight = mapHeight;
-		backgroundImageWidth = mapHeight;
-	}
-
-	// Update is called once per frame
-	void Update()
-	{
-
+		if(mapWidth != Screen.width * 0.5f)
+        {
+			InitMapSettings();
+        }
 	}
 
 	List<Vector2> radarPointsCache = new List<Vector2>();
@@ -92,7 +101,12 @@ public class Minimap : MonoBehaviour
 			Rect playerRect = new Rect(mapCenter.x, mapCenter.y, 5, 5);
 
 			// draw player as a small red rectangle
-			DrawShapes.DrawRectangle(playerRect, Color.red, 2);
+			DrawShapes.DrawRectangle(playerRect, Color.blue, 2);
+
+			GUIStyle style1 = new GUIStyle();
+			style1.richText = true;
+			GUI.Label(new Rect(mapCenter.x, mapCenter.y+5, 100, 20), "<color='blue'>" + PlayerName + "</color>", style1);
+
 
 			// add code here to draw the target on the mini-map...
 			MapBeacon[] beacons = GameObject.FindObjectsOfType<MapBeacon>();
@@ -121,45 +135,45 @@ public class Minimap : MonoBehaviour
 				//are we intersecting the north border?
 				if (LineIntersection((mapSideNorthStartPoint), (mapSideNorthStopPoint), mapCenter, rotatedVector, ref pointOfIntersection))
 				{
-					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='blue'>" + radarDistance + " " + b.MapText + "</color>", style);
+					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='red'>" + radarDistance + " " + b.MapText + "</color>", style);
 
 					var dir = mapCenter - rotatedVector; //a vector pointing from pointA to pointB
 					var rot = Quaternion.LookRotation(dir, Vector3.forward).eulerAngles; //calc a rotation that
 																						 //Debug.Log(string.Format("{0},{1},{2}",rot.x,rot.y,rot.z));
 																						 //draw a cyan circle at the point of intersection
-					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.blue, 2);
+					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.red, 2);
 					//DrawShapes.DrawTriangle(pointOfIntersection, Color.cyan, 2, 10, rot.z);
 				}
 				else if (LineIntersection(mapSideSouthStartPoint, (mapSideSouthStopPoint), mapCenter, rotatedVector, ref pointOfIntersection))
 				{
-					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='blue'>" + radarDistance + " " + b.MapText + "</color>", style);
+					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='red'>" + radarDistance + " " + b.MapText + "</color>", style);
 
 					//draw a cyan circle at the point of intersection
-					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.blue, 2);
+					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.red, 2);
 					//DrawShapes.DrawTriangle(pointOfIntersection, Color.cyan, 2, 10, fYRot);
 				}
 				else if (LineIntersection((mapSideWestStartPoint), (mapSideWestStopPoint), mapCenter, rotatedVector, ref pointOfIntersection))
 				{
-					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='blue'>" + radarDistance + " " + b.MapText + "</color>", style);
+					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='red'>" + radarDistance + " " + b.MapText + "</color>", style);
 
 					//draw a cyan circle at the point of intersection
-					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.blue, 2);
+					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.red, 2);
 					//DrawShapes.DrawTriangle(pointOfIntersection, Color.cyan, 2, 10, fYRot);
 				}
 				else if (LineIntersection((mapSideEastStartPoint), (mapSideEastStopPoint), mapCenter, rotatedVector, ref pointOfIntersection))
 				{
-					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='blue'>" + radarDistance + " " + b.MapText + "</color>", style);
+					GUI.Label(new Rect(pointOfIntersection.x, pointOfIntersection.y, 100, 20), "<color='red'>" + radarDistance + " " + b.MapText + "</color>", style);
 
 					//draw a cyan circle at the point of intersection
-					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.blue, 2);
+					DrawShapes.DrawCircle(pointOfIntersection, circleSize, Color.red, 2);
 					//DrawShapes.DrawTriangle(pointOfIntersection, Color.cyan, 2, 10, fYRot);
 				}
 				else
 				{
-					GUI.Label(new Rect(rotatedVector.x, rotatedVector.y, 100, 20), "<color='blue'>" + radarDistance + " " + b.MapText + "</color>", style);
+					GUI.Label(new Rect(rotatedVector.x, rotatedVector.y, 100, 20), "<color='red'>" + radarDistance + " " + b.MapText + "</color>", style);
 
 					//draw the beacon as a circle
-					DrawShapes.DrawCircle(rotatedVector, circleSize, Color.blue, 2);
+					DrawShapes.DrawCircle(rotatedVector, circleSize, Color.red, 2);
 				}
 			}
 
