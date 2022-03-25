@@ -40,6 +40,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     Rigidbody2D rb;
     private Animator anim;
     LayerMask groundMaskLayer;
+    LayerMask platformMaskLayer;
     LayerMask ladderMaskLayer;
     LayerMask wallMaskLayer;
     bool hasMovingAnimation = false;
@@ -56,9 +57,10 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     public float climbSpeed = 3f;
     public float jumpSpeed = 5f;
 
-    public string GroundMaskLayerName = "Ground";
-    public string LadderMaskLayerName = "Ladder";
-    public string wallMaskLayerName = "Walls";
+    public string GroundLayerName = "Ground";
+    public string PlatformMaskLayerName = "Platforms";
+    public string LadderLayerName = "Ladders";
+    public string WallLayerName = "Walls";
     public string AttackAnimationTrigger = "Attack";
     public string JumpingAnimationParam = "IsJumping";
     public string MovingAnimationParam = "IsMoving";
@@ -73,7 +75,6 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     Collider2D closestClimableLader = null;
     bool isAttacking = true;
     bool isOnLadder = false;
-    public string TagOfFixedGround = "FixedGround";//any objects with this tag will not have its colliders changed to trigger colliders if the player is not above it.
     enum speed { fast, slow }
     speed movespeed = TwoDPlatformPlayerController.speed.slow;
     bool isClimbing = false;
@@ -87,14 +88,14 @@ public class TwoDPlatformPlayerController : MonoBehaviour
     Collider2D[] colliders;
     void Start()
     {
-        //determine if we have fixed ground capability.
-        try{
-            hasTagOfFixedGround = gameObject.CompareTag(TagOfFixedGround);
-        }
-        catch(System.Exception exc)
-        {
+        ////determine if we have fixed ground capability.
+        //try{
+        //    hasTagOfFixedGround = gameObject.CompareTag(TagOfFixedGround);
+        //}
+        //catch(System.Exception exc)
+        //{
 
-        }
+        //}
 
         colliders = GameObject.FindObjectsOfType<Collider2D>();
         playerColliders = GetComponentsInChildren<Collider2D>();
@@ -111,9 +112,10 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             Debug.LogError("Please add an animation to your player to use this platformer script.");
             return;
         }
-        groundMaskLayer = LayerMask.GetMask(GroundMaskLayerName);
-        ladderMaskLayer = LayerMask.GetMask(LadderMaskLayerName);
-        wallMaskLayer = LayerMask.GetMask(wallMaskLayerName);
+        groundMaskLayer = LayerMask.GetMask(GroundLayerName);
+        platformMaskLayer = LayerMask.GetMask(PlatformMaskLayerName);
+        ladderMaskLayer = LayerMask.GetMask(LadderLayerName);
+        wallMaskLayer = LayerMask.GetMask(WallLayerName);
 
         if (anim != null)
         {
@@ -246,12 +248,11 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                     }
                     float verticalVelocity = rb.velocity.y;
 
-
                     //add the platform to stand on
                     ladderPlatform = new GameObject("LadderCollider");
                     float ladderYPos = feetPosition.transform.position.y;
                     if (verticalVelocity <= -20)
-                        ladderYPos -= 30;
+                        ladderYPos -= 36;
                     ladderPlatform.transform.position = new Vector2(feetPosition.transform.position.x, ladderYPos);
                     BoxCollider2D playerLadderCollider = (BoxCollider2D)ladderPlatform.AddComponent(typeof(BoxCollider2D));
                     //apply a friction physics material so the player cannot fly off if they are on a swinging ladder.
@@ -274,7 +275,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                     if (Input.GetAxisRaw("Vertical") != 0)
                     {
                         //stop the horizontal velocity
-                        rb.velocity = new Vector2(0, 0);
+                        rb.velocity = new Vector2(0, rb.velocity.y);
                     }
 
                     isOnLadder = true;
@@ -352,10 +353,10 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                 if (monitor != null && monitor.IsRotating)
                     newX = hit.Value.point.x;
 
-                //The player must maintain the distance from theladder platform
-                float currentDistance = Vector2.Distance(gameObject.transform.position, ladderPlatform.transform.position);
-                //this is what makes the swinging ladders work. (Keeping us centered as we climb up and down)
-                gameObject.transform.position = new Vector2(newX, newPlatformY);
+                ////The player must maintain the distance from theladder platform
+                //float currentDistance = Vector2.Distance(gameObject.transform.position, ladderPlatform.transform.position);
+                ////this is what makes the swinging ladders work. (Keeping us centered as we climb up and down)
+                //gameObject.transform.position = new Vector2(newX, newPlatformY);
 
             }
             ladderPlatform.transform.position = new Vector2(newX, newPlatformY);
@@ -395,7 +396,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             anim.SetBool(MovingAnimationParam, true);
 
         //run the jumping animation if necessary
-        if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) || grounded || isOnLadder))
+        if (hasJumpingAnimation && ((Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) && grounded) || grounded || isOnLadder))
             anim.SetBool(JumpingAnimationParam, false);
         else if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder)))
             anim.SetBool(JumpingAnimationParam, true);
@@ -495,7 +496,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         foreach (Collider2D coll in colliders)
         {
             //check to see if the collider is in the ground layer and if we are touching it.
-            if (coll != null && coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value && (!hasTagOfFixedGround || !coll.gameObject.CompareTag(TagOfFixedGround)))
+            if (coll != null && coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == platformMaskLayer.value)
             {
                 //Debug.Log(coll.gameObject.name + ":" + (coll.bounds.extents.y + coll.bounds.center.y).ToString());
                 //are we above it, and are we over it
@@ -601,7 +602,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         foreach (Collider2D coll in colliders)
         {
             //check toi see if the collider is in the ground layer and if we are touching it.
-            if (coll != null && coll.gameObject != this.gameObject && 1 << coll.gameObject.layer == groundMaskLayer.value)
+            if (coll != null && coll.gameObject != this.gameObject && ((1 << coll.gameObject.layer == groundMaskLayer.value) || (1 << coll.gameObject.layer == platformMaskLayer.value)))
             {
                 foreach (Collider2D playerCollider in playerColliders)
                     if (coll.IsTouching(playerCollider) && coll.isTrigger == false)
