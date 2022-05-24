@@ -25,21 +25,21 @@ public class TakeHitController : MonoBehaviour
     public string AnimationOfCollidingObjectToCauseDamage = ""; //The damage only occurs if the player is performing a specific animation at the time of collision.
     public Component[] ComponentsToDisableWhileTakingDamage = null;
     public float timeBetweenHits = 500f;//duration between hits.
-    private int numHits = 0;
-    private System.DateTime lastHitTime;
+    protected int numHits = 0;
+    protected System.DateTime lastHitTime;
 
-    bool isRecoveringFromDamage = false;
-    bool allowRecoverFromDamage = true;
-    private Animator myAnimator;
+    protected bool isRecoveringFromDamage = false;
+    protected bool allowRecoverFromDamage = true;
+    protected Animator myAnimator;
     // Start is called before the first frame update
-    void Start()
+    protected void Start()
     {
         lastHitTime = System.DateTime.Now;
         myAnimator = GetComponentInChildren<Animator>();
     }
 
     // Update is called once per frame
-    void Update()
+    protected void Update()
     {
         //if this object has been damaged and the damage features have been turned off, check if we need to turn them back on.
         if (allowRecoverFromDamage && isRecoveringFromDamage && (System.DateTime.Now - lastHitTime).TotalMilliseconds > timeBetweenHits)
@@ -54,7 +54,7 @@ public class TakeHitController : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    protected void OnTriggerEnter2D(Collider2D collision)
     {
         //if this script is disabled, return.
         if (!this.enabled)
@@ -80,11 +80,13 @@ public class TakeHitController : MonoBehaviour
         }
     }
 
-    public void TakeHit()
+    protected virtual bool TakeHit()
     {
+        bool bRet = false;
         //has it been enough time since the last hit?
         if (!isRecoveringFromDamage && (System.DateTime.Now - lastHitTime).TotalMilliseconds > timeBetweenHits)
         {
+            bRet = true;
             //increase the number of hits on this object
             numHits++;
             isRecoveringFromDamage = true;
@@ -105,9 +107,11 @@ public class TakeHitController : MonoBehaviour
             //check if we need to destroy this game object
             CheckIfDead();
         }
+
+        return bRet;
     }
 
-    private bool IsDamageCollision(GameObject g)
+    protected bool IsDamageCollision(GameObject g)
     {
         string tagToCauseDamageLower = TagOfGameObjectToCauseDamage.ToLower();
         if (g.tag.ToLower() == tagToCauseDamageLower)
@@ -128,7 +132,7 @@ public class TakeHitController : MonoBehaviour
         
     }
 
-    private void CheckIfDead()
+    protected virtual void CheckIfDead()
     {
         if(numHits>= NumberOfHitsUntilDestroyMe)
         {
@@ -147,10 +151,15 @@ public class TakeHitController : MonoBehaviour
             else if (c is Collider2D)
                 ((Collider2D)c).enabled = false;
 
-
-            //destroy the game object
-            Destroy(gameObject, TimeToDelayDestoryWhenDead);
+            Die();
+            
         }
+    }
+
+    protected virtual void Die()
+    {
+        //destroy the game object
+        Destroy(gameObject, TimeToDelayDestoryWhenDead);
     }
 
 }
