@@ -390,7 +390,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             gameObject.transform.Rotate(0, 180, 0);
 
         //run the move animation or idle animation if necessary.
-        if ((hasMovingAnimation && Input.GetAxisRaw("Horizontal") == 0 && anim.GetBool(MovingAnimationParam)))
+        if (hasMovingAnimation &&  (hasMovingAnimation && Input.GetAxisRaw("Horizontal") == 0 && anim.GetBool(MovingAnimationParam) || rb.velocity.x == 0 || rb.velocity.y != 0))
             anim.SetBool(MovingAnimationParam, false);
         else if (hasMovingAnimation && Input.GetAxisRaw("Horizontal") != 0 && !anim.GetBool(MovingAnimationParam))
             anim.SetBool(MovingAnimationParam, true);
@@ -530,7 +530,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         }
 
         //we know we are falling if we are not grounded and the up velocity is <0
-        bool isFalling = !grounded && rb.velocity.y < 0;
+        bool isFalling = !grounded && rb.velocity.y < 0 && !isClimbing;
 
         //set the is falling trigger if necessary
         if (isFalling && hasFallingAnimation && !anim.GetBool(IsFallingAnimationParam))
