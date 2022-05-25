@@ -396,9 +396,9 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             anim.SetBool(MovingAnimationParam, true);
 
         //run the jumping animation if necessary
-        if (hasJumpingAnimation && ((Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) && grounded) || grounded || isOnLadder))
+        if (hasJumpingAnimation && ((Input.GetAxisRaw("Jump") == 0 && anim.GetBool(JumpingAnimationParam) && grounded) || grounded || isOnLadder || rb.velocity.y == 0))
             anim.SetBool(JumpingAnimationParam, false);
-        else if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder)))
+        else if (hasJumpingAnimation && (Input.GetAxisRaw("Jump") != 0 && !anim.GetBool(JumpingAnimationParam) || (!grounded && !isOnLadder && rb.velocity.y !=0)))
             anim.SetBool(JumpingAnimationParam, true);
 
         //run the climbing idle animation if necessary
@@ -516,7 +516,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
         //do this at the end of update so as not to break code above it
         if (canJump && Input.GetAxisRaw("Jump") > 0)
             canJump = false;
-        else if (!canJump && Input.GetAxisRaw("Jump") == 0)
+        else if ((!canJump && Input.GetAxisRaw("Jump") == 0))
             canJump = true;
 
         //set the is grounded trigger if necessary
@@ -601,7 +601,7 @@ public class TwoDPlatformPlayerController : MonoBehaviour
             myFeetPosition = feetPosition;
         foreach (Collider2D coll in colliders)
         {
-            //check toi see if the collider is in the ground layer and if we are touching it.
+            //check to see if the collider is in the ground layer and if we are touching it.
             if (coll != null && coll.gameObject != this.gameObject && ((1 << coll.gameObject.layer == groundMaskLayer.value) || (1 << coll.gameObject.layer == platformMaskLayer.value)))
             {
                 foreach (Collider2D playerCollider in playerColliders)
@@ -611,6 +611,11 @@ public class TwoDPlatformPlayerController : MonoBehaviour
                     }
             }
         }
+
+        //if the player is not moving at all in the y axis, they are allowed to jump.  (This could be if they are standing on an enemy or something.)
+        if (rb.velocity.y == 0)
+            return true;
+
         return false;
     }
 
